@@ -4,9 +4,8 @@ Add-Type -AssemblyName System.Drawing
 # Configurazione
 $repoOwner = "ndavide93"
 $repoName = "Dave_ScriptsBook"
-$repoUrl = "https://api.github.com/repos/$repoOwner/$repoName/contents"
-$pythonVersion = "3.12.3"
-$pythonEmbeddableUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
+$repoUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/"
+$pythonEmbeddableZip = "$repoUrl/python_embeddable/python-3.13.2-embed-amd64.zip"
 $pythonDir = "$env:TEMP\python_embeddable"
 
 # Variabili globali
@@ -47,6 +46,39 @@ function Update-Status {
     $statusLabel.Update()
 }
 
+# Installa Python Embeddable
+function Install-PythonEmbeddable {
+    try {
+        Update-Status "Installazione Python Embeddable..."
+
+        # Crea la cartella per Python Embeddable
+        if (-not (Test-Path $pythonDir)) {
+            New-Item -ItemType Directory -Path $pythonDir | Out-Null
+        }
+
+        # Scarica lo zip di Python Embeddable
+        $zipPath = "$env:TEMP\python_embeddable.zip"
+        Invoke-WebRequest -Uri $pythonEmbeddableZip -OutFile $zipPath -UseBasicParsing
+
+        # Estrai il contenuto
+        Expand-Archive -Path $zipPath -DestinationPath $pythonDir -Force
+        Remove-Item $zipPath -Force
+
+        # Verifica la presenza di python.exe
+        $script:pythonPath = "$pythonDir\python.exe"
+        if (-not (Test-Path $pythonPath)) {
+            throw "python.exe non trovato nello zip."
+        }
+
+        # Aggiorna PATH temporaneo
+        $env:PATH = "$pythonDir;$env:PATH"
+        $script:pythonInstalled = $true
+        Update-Status "Python Embeddable installato in: $pythonDir"
+    } catch {
+        Update-Status "Errore durante l'installazione di Python Embeddable: $_"
+    }
+}
+
 # Verifica Python
 function Check-Python {
     Update-Status "Verifica Python..."
@@ -57,38 +89,8 @@ function Check-Python {
         $script:pythonPath = $pythonExe.Source
         Update-Status "Python trovato: $($pythonExe.Source)"
     } else {
-        Update-Status "Python non trovato. Vuoi installare Python Embeddable?"
-        $result = [System.Windows.Forms.MessageBox]::Show(
-            "Python non è installato. Installare Python Embeddable per continuare?",
-            "Python Mancante",
-            [System.Windows.Forms.MessageBoxButtons]::YesNo
-        )
-        if ($result -eq "Yes") {
-            Install-PythonEmbeddable
-        } else {
-            Update-Status "Python non disponibile. Alcuni tool potrebbero non funzionare."
-        }
-    }
-}
-
-# Installa Python Embeddable
-function Install-PythonEmbeddable {
-    try {
-        Update-Status "Installazione Python Embeddable..."
-        if (-not (Test-Path $pythonDir)) {
-            New-Item -ItemType Directory -Path $pythonDir | Out-Null
-        }
-
-        $zipPath = "$env:TEMP\python_embeddable.zip"
-        Invoke-WebRequest -Uri $pythonEmbeddableUrl -OutFile $zipPath -UseBasicParsing
-        Expand-Archive -Path $zipPath -DestinationPath $pythonDir -Force
-        Remove-Item $zipPath -Force
-
-        $script:pythonPath = "$pythonDir\python.exe"
-        $script:pythonInstalled = $true
-        Update-Status "Python Embeddable installato in: $pythonDir"
-    } catch {
-        Update-Status "Errore durante l'installazione di Python Embeddable: $_"
+        Update-Status "Python non trovato. Installazione di Python Embeddable..."
+        Install-PythonEmbeddable
     }
 }
 
@@ -155,13 +157,13 @@ $executeButton.Add_Click({
 
     try {
         if ($scriptType -eq "ps1") {
-            $scriptUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/tools/$scriptName"
+            $scriptUrl = "$repoUrl/tools/$scriptName"
             Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing | Invoke-Expression
         } elseif ($scriptType -eq "py") {
             if (-not $pythonInstalled) {
                 throw "Python non disponibile"
             }
-            $scriptUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/python_tools/$scriptName"
+            $scriptUrl = "$repoUrl/python_tools/$scriptName"
             $tempScript = "$env:TEMP\$scriptName"
             Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
             & $pythonPath $tempScript
