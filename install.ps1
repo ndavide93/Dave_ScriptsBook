@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.Drawing
 $repoOwner = "ndavide93"
 $repoName = "Dave_ScriptsBook"
 $repoUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/"
-$pythonEmbeddableZip = "$repoUrl/python_embeddable/python-3.13.2-embed-amd64.zip"
+$pythonEmbeddableZip = "$repoUrl/python_embeddable/python-embed-amd64.zip"
 $pythonDir = "$env:TEMP\python_embeddable"
 
 # Variabili globali
@@ -163,11 +163,23 @@ $executeButton.Add_Click({
             if (-not $pythonInstalled) {
                 throw "Python non disponibile"
             }
+            
+            # Disabilita temporaneamente l'alias di esecuzione dell'app
+            $appExecutionAlias = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\python.exe" -ErrorAction SilentlyContinue
+            if ($appExecutionAlias) {
+                Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\python.exe" -Name "(Default)" -Value ""
+            }
+
             $scriptUrl = "$repoUrl/python_tools/$scriptName"
             $tempScript = "$env:TEMP\$scriptName"
             Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
             & $pythonPath $tempScript
             Remove-Item $tempScript -Force
+
+            # Riabilita l'alias di esecuzione dell'app
+            if ($appExecutionAlias) {
+                Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\python.exe" -Name "(Default)" -Value $appExecutionAlias."(Default)"
+            }
         }
         [System.Windows.Forms.MessageBox]::Show("Esecuzione completata!")
     } catch {
