@@ -8,27 +8,6 @@ $repoUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/"
 $pythonEmbeddableZip = "$repoUrl/python_embeddable/python-embed-amd64.zip"
 $pythonDir = "$env:TEMP\python_embeddable"
 
-$repoOwner = "ndavide93"
-$repoName = "Dave_ScriptsBook"
-$repoUrl = "https://api.github.com/repos/$repoOwner/$repoName/contents"
-
-# Test con la cartella tools
-try {
-    $response = Invoke-RestMethod -Uri "$repoUrl/tools" -UseBasicParsing
-    Write-Host "File in tools:"
-    $response | Where-Object { $_.type -eq "file" } | ForEach-Object { $_.name }
-} catch {
-    Write-Host "Errore nel recupero dei file da tools: $_"
-}
-
-# Test con la cartella python_tools
-try {
-    $response = Invoke-RestMethod -Uri "$repoUrl/python_tools" -UseBasicParsing
-    Write-Host "File in python_tools:"
-    $response | Where-Object { $_.type -eq "file" } | ForEach-Object { $_.name }
-} catch {
-    Write-Host "Errore nel recupero dei file da python_tools: $_"
-}
 
 # Variabili globali
 $pythonInstalled = $false
