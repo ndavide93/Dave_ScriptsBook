@@ -5,7 +5,7 @@ Add-Type -AssemblyName System.Drawing
 $repoOwner = "ndavide93"
 $repoName = "Dave_ScriptsBook"
 $repoUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/"
-$pythonEmbeddableZip = "$repoUrl/python_embeddable/python-3.13.2-embed-amd64.zip"  # Correzione del percorso dello zip
+$pythonEmbeddableZip = "$repoUrl/python_embeddable/python-3.13.2-embed-amd64.zip"
 $pythonDir = "$env:TEMP\python_embeddable"
 
 # Variabili globali
@@ -51,26 +51,20 @@ function Install-PythonEmbeddable {
     try {
         Update-Status "Installazione Python Embeddable..."
 
-        # Crea la cartella per Python Embeddable
         if (-not (Test-Path $pythonDir)) {
             New-Item -ItemType Directory -Path $pythonDir | Out-Null
         }
 
-        # Scarica lo zip di Python Embeddable
         $zipPath = "$env:TEMP\python_embeddable.zip"
         Invoke-WebRequest -Uri $pythonEmbeddableZip -OutFile $zipPath -UseBasicParsing
-
-        # Estrai il contenuto
         Expand-Archive -Path $zipPath -DestinationPath $pythonDir -Force
         Remove-Item $zipPath -Force
 
-        # Verifica la presenza di python.exe
         $script:pythonPath = "$pythonDir\python.exe"
         if (-not (Test-Path $pythonPath)) {
             throw "python.exe non trovato nello zip."
         }
 
-        # Aggiorna PATH temporaneo
         $env:PATH = "$pythonDir;$env:PATH"
         $script:pythonInstalled = $true
         Update-Status "Python Embeddable installato in: $pythonDir"
@@ -99,9 +93,9 @@ function Get-GitHubFiles {
     param (
         [string]$folderPath
     )
-    $url = "$repoUrl/$folderPath"
+    $url = "https://api.github.com/repos/$repoOwner/$repoName/contents/$folderPath"
     try {
-        $response = Invoke-RestMethod -Uri $url -UseBasicParsing
+        $response = Invoke-RestMethod -Uri $url -UseBasicParsing -Headers @{ "Accept" = "application/vnd.github.v3+json" }
         return $response | Where-Object { $_.type -eq "file" } | ForEach-Object { $_.name }
     } catch {
         Write-Host "Errore nel recupero dei file da GitHub: $_"
@@ -113,26 +107,22 @@ function Get-GitHubFiles {
 function Load-Tools {
     $tree.Nodes.Clear()
 
-    # Aggiungi cartelle PowerShell
     $psNode = New-Object System.Windows.Forms.TreeNode("PowerShell Tools")
     $psNode.Tag = "folder"
     $tree.Nodes.Add($psNode)
 
-    # Aggiungi cartelle Python
     $pyNode = New-Object System.Windows.Forms.TreeNode("Python Tools")
     $pyNode.Tag = "folder"
     $tree.Nodes.Add($pyNode)
 
-    # Carica script PowerShell
-    $psScripts = Get-GitHubFiles -folderPath "tools"  # Correzione del percorso
+    $psScripts = Get-GitHubFiles -folderPath "tools"  # Aggiorna se necessario
     foreach ($script in $psScripts) {
         $child = New-Object System.Windows.Forms.TreeNode($script)
         $child.Tag = "ps1"
         $psNode.Nodes.Add($child)
     }
 
-    # Carica script Python
-    $pyScripts = Get-GitHubFiles -folderPath "python_tools"  # Correzione del percorso
+    $pyScripts = Get-GitHubFiles -folderPath "python_tools"  # Aggiorna se necessario
     foreach ($script in $pyScripts) {
         $child = New-Object System.Windows.Forms.TreeNode($script)
         $child.Tag = "py"
@@ -157,26 +147,24 @@ $executeButton.Add_Click({
 
     try {
         if ($scriptType -eq "ps1") {
-            $scriptUrl = "$repoUrl/tools/$scriptName"  # Correzione del percorso
+            $scriptUrl = "$repoUrl/tools/$scriptName"  # Aggiorna se necessario
             Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing | Invoke-Expression
         } elseif ($scriptType -eq "py") {
             if (-not $pythonInstalled) {
                 throw "Python non disponibile"
             }
-            
-            # Disabilita temporaneamente l'alias di esecuzione dell'app
+
             $appExecutionAlias = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\python.exe" -ErrorAction SilentlyContinue
             if ($appExecutionAlias) {
                 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\python.exe" -Name "(Default)" -Value ""
             }
 
-            $scriptUrl = "$repoUrl/python_tools/$scriptName"  # Correzione del percorso
+            $scriptUrl = "$repoUrl/python_tools/$scriptName"  # Aggiorna se necessario
             $tempScript = "$env:TEMP\$scriptName"
             Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
             & $pythonPath $tempScript
             Remove-Item $tempScript -Force
 
-            # Riabilita l'alias di esecuzione dell'app
             if ($appExecutionAlias) {
                 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\python.exe" -Name "(Default)" -Value $appExecutionAlias."(Default)"
             }
