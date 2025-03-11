@@ -5,9 +5,8 @@ Add-Type -AssemblyName System.Drawing
 $repoOwner = "ndavide93"
 $repoName = "Dave_ScriptsBook"
 $repoUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/"
-$pythonEmbeddableZip = "$repoUrl/python_embeddable/python-embed-amd64.zip"
+$pythonEmbeddableZip = "$repoUrl/python_embeddable/python-3.13.2-embed-amd64.zip"  # Correzione del percorso dello zip
 $pythonDir = "$env:TEMP\python_embeddable"
-
 
 # Variabili globali
 $pythonInstalled = $false
@@ -125,7 +124,7 @@ function Load-Tools {
     $tree.Nodes.Add($pyNode)
 
     # Carica script PowerShell
-    $psScripts = Get-GitHubFiles -folderPath "tools"
+    $psScripts = Get-GitHubFiles -folderPath "tools"  # Correzione del percorso
     foreach ($script in $psScripts) {
         $child = New-Object System.Windows.Forms.TreeNode($script)
         $child.Tag = "ps1"
@@ -133,7 +132,7 @@ function Load-Tools {
     }
 
     # Carica script Python
-    $pyScripts = Get-GitHubFiles -folderPath "python_tools"
+    $pyScripts = Get-GitHubFiles -folderPath "python_tools"  # Correzione del percorso
     foreach ($script in $pyScripts) {
         $child = New-Object System.Windows.Forms.TreeNode($script)
         $child.Tag = "py"
@@ -158,7 +157,7 @@ $executeButton.Add_Click({
 
     try {
         if ($scriptType -eq "ps1") {
-            $scriptUrl = "$repoUrl/tools/$scriptName"
+            $scriptUrl = "$repoUrl/tools/$scriptName"  # Correzione del percorso
             Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing | Invoke-Expression
         } elseif ($scriptType -eq "py") {
             if (-not $pythonInstalled) {
@@ -171,7 +170,7 @@ $executeButton.Add_Click({
                 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\python.exe" -Name "(Default)" -Value ""
             }
 
-            $scriptUrl = "$repoUrl/python_tools/$scriptName"
+            $scriptUrl = "$repoUrl/python_tools/$scriptName"  # Correzione del percorso
             $tempScript = "$env:TEMP\$scriptName"
             Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
             & $pythonPath $tempScript
