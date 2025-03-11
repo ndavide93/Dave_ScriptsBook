@@ -2,12 +2,12 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # Configurazione
-$repoUrl = "https://raw.githubusercontent.com/tuonome/repository/main/"
+$repoOwner = "ndavide93"
+$repoName = "Dave_ScriptsBook"
+$repoUrl = "https://api.github.com/repos/$repoOwner/$repoName/contents"
 $pythonVersion = "3.12.3"
 $pythonEmbeddableUrl = "https://www.python.org/ftp/python/$pythonVersion/python-$pythonVersion-embed-amd64.zip"
 $pythonDir = "$env:TEMP\python_embeddable"
-$toolsDir = "$repoUrl/tools"
-$pythonToolsDir = "$repoUrl/python_tools"
 
 # Variabili globali
 $pythonInstalled = $false
@@ -23,7 +23,7 @@ $form.StartPosition = "CenterScreen"
 $statusLabel = New-Object System.Windows.Forms.Label
 $statusLabel.Location = New-Object System.Drawing.Point(10, 20)
 $statusLabel.Size = New-Object System.Drawing.Size(560, 20)
-$statusLabel.Text = "Verifica Python..."
+$statusLabel.Text = "Caricamento..."
 $form.Controls.Add($statusLabel)
 
 # TreeView per i tool
@@ -92,6 +92,21 @@ function Install-PythonEmbeddable {
     }
 }
 
+# Ottieni la lista dei file da GitHub
+function Get-GitHubFiles {
+    param (
+        [string]$folderPath
+    )
+    $url = "$repoUrl/$folderPath"
+    try {
+        $response = Invoke-RestMethod -Uri $url -UseBasicParsing
+        return $response | Where-Object { $_.type -eq "file" } | ForEach-Object { $_.name }
+    } catch {
+        Write-Host "Errore nel recupero dei file da GitHub: $_"
+        return @()
+    }
+}
+
 # Popola TreeView con i tool
 function Load-Tools {
     $tree.Nodes.Clear()
@@ -106,17 +121,16 @@ function Load-Tools {
     $pyNode.Tag = "folder"
     $tree.Nodes.Add($pyNode)
 
-    # Simula il caricamento dei tool (da sostituire con chiamate reali al repository)
-    # Esempio statico (sostituire con logica dinamica)
-    $psScripts = @("script1.ps1", "script2.ps1")
-    $pyScripts = @("script1.py", "script2.py")
-
+    # Carica script PowerShell
+    $psScripts = Get-GitHubFiles -folderPath "tools"
     foreach ($script in $psScripts) {
         $child = New-Object System.Windows.Forms.TreeNode($script)
         $child.Tag = "ps1"
         $psNode.Nodes.Add($child)
     }
 
+    # Carica script Python
+    $pyScripts = Get-GitHubFiles -folderPath "python_tools"
     foreach ($script in $pyScripts) {
         $child = New-Object System.Windows.Forms.TreeNode($script)
         $child.Tag = "py"
@@ -125,6 +139,7 @@ function Load-Tools {
 
     $tree.ExpandAll()
     $executeButton.Enabled = $true
+    Update-Status "Caricamento completato."
 }
 
 # Esegui il tool selezionato
@@ -140,13 +155,13 @@ $executeButton.Add_Click({
 
     try {
         if ($scriptType -eq "ps1") {
-            $scriptUrl = "$toolsDir/$scriptName"
+            $scriptUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/tools/$scriptName"
             Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing | Invoke-Expression
         } elseif ($scriptType -eq "py") {
             if (-not $pythonInstalled) {
                 throw "Python non disponibile"
             }
-            $scriptUrl = "$pythonToolsDir/$scriptName"
+            $scriptUrl = "https://raw.githubusercontent.com/$repoOwner/$repoName/main/python_tools/$scriptName"
             $tempScript = "$env:TEMP\$scriptName"
             Invoke-WebRequest -Uri $scriptUrl -OutFile $tempScript -UseBasicParsing
             & $pythonPath $tempScript
